@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>URL Shortener</title>
+    <script src="https://code.jquery.com/jquery-3.1.1.min.js" crossorigin="anonymous"></script>
+    <style>
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+        }
+
+        body,
+        section {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+
+        body {
+            min-height: 100vh;
+            font-family: "Inter", "Segoe UI", sans-serif;
+            line-height: 1.5;
+            color: #d1d5db; /* light text for dark background */
+            background: #343541;
+            background: radial-gradient(circle at top left, #444654, #343541 80%);
+        }
+
+        main {
+            max-width: 640px;
+            width: 100%;
+            border-radius: 8px;
+            overflow: hidden;
+            background: #202123; /* dark container background */
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.6);
+            animation: fadeIn 0.4s ease-in-out;
+        }
+
+        h1 {
+            padding: 1rem 1.5rem;
+            margin: 0;
+            background: linear-gradient(90deg, #10a37f, #6adba3); /* greenish gradient */
+            color: #fff;
+            text-align: center;
+            font-size: 1.5rem;
+            font-weight: 600;
+
+            perspective: 800px;
+            transform-style: preserve-3d;
+            animation: float3d 6s ease-in-out infinite;
+        }
+
+        @keyframes float3d {
+            0%, 100% {
+                transform: translateZ(0) rotateX(0deg) rotateY(0deg);
+                filter: drop-shadow(0 4px 6px rgba(0,0,0,0.2));
+            }
+            25% {
+                transform: translateZ(15px) rotateX(3deg) rotateY(5deg);
+                filter: drop-shadow(0 6px 8px rgba(0,0,0,0.3));
+            }
+            50% {
+                transform: translateZ(0) rotateX(0deg) rotateY(0deg);
+                filter: drop-shadow(0 4px 6px rgba(0,0,0,0.2));
+            }
+            75% {
+                transform: translateZ(15px) rotateX(-3deg) rotateY(-5deg);
+                filter: drop-shadow(0 6px 8px rgba(0,0,0,0.3));
+            }
+        }
+
+        form {
+            padding: 1.5rem;
+        }
+
+        input,
+        button {
+            font-family: inherit;
+            font-size: 1rem;
+            border: none;
+            padding: 0.75rem 1rem;
+        }
+
+        input {
+            width: 100%;
+            border-radius: 6px;
+            border: 1px solid #444654;
+            background-color: #121214;
+            color: #d1d5db;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        input::placeholder {
+            color: #6b7280;
+        }
+
+        input:focus {
+            border-color: #10a37f;
+            box-shadow: 0 0 0 3px rgba(16, 163, 127, 0.3);
+            outline: none;
+            background-color: #1e1f23;
+        }
+
+        .buttons {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        button {
+            cursor: pointer;
+            flex: 1;
+            border-radius: 6px;
+            font-size: 1rem;
+            font-weight: 500;
+            transition: background-color 0.3s ease, box-shadow 0.3s ease, color 0.3s ease;
+            color: #fff;
+        }
+
+        /* Shorten button */
+        #shorten {
+            background: linear-gradient(90deg, #10a37f, #6adba3);
+        }
+
+        #shorten:hover {
+            background: linear-gradient(90deg, #0e8b6f, #58c493);
+            box-shadow: 0 4px 12px rgba(16, 163, 127, 0.6);
+            color: #e0ffe0;
+        }
+
+        /* Cancel button */
+        #cancel {
+            background: #bb2f2f;
+        }
+
+        #cancel:hover {
+            background: #992525;
+            box-shadow: 0 4px 12px rgba(187, 47, 47, 0.6);
+            color: #ffd6d6;
+        }
+
+        section {
+            padding: 1.25rem;
+            text-align: center;
+            background-color: #202123;
+            border-top: 1px solid #444654;
+        }
+
+        section h2 a {
+            color: #10a37f;
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 1.1rem;
+        }
+
+        section h2 a:hover {
+            text-decoration: underline;
+        }
+
+        /* Toast container below the form */
+        #toast-container {
+            text-align: center;
+            padding: 0 1.5rem;
+            margin-top: 0.5rem;
+            min-height: 24px;
+        }
+
+        .toast {
+            display: inline-block;
+            background: rgba(50, 50, 50, 0.95);
+            color: white;
+            padding: 10px 16px;
+            border-radius: 6px;
+            font-size: 14px;
+            animation: fadeInOut 2.5s forwards;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        @keyframes fadeInOut {
+            0% {
+                opacity: 0;
+            }
+            10%, 90% {
+                opacity: 1;
+            }
+            100% {
+                opacity: 0;
+            }
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: scale(0.97);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+    </style>
+</head>
+<body>
+    <main>
+        <h1>URL Shortener</h1>
+        <form id="post-form">
+            {% csrf_token %}
+            <input type="text" name="link" id="link" placeholder="Enter your URL here..." />
+            <div class="buttons">
+                <button type="submit" id="shorten">Shorten</button>
+                <button type="button" id="cancel">Cancel</button>
+            </div>
+        </form>
+
+        <!-- Toast messages appear here -->
+        <div id="toast-container"></div>
+
+        <section id="section">
+            <h2></h2>
+        </section>
+    </main>
+
+    <script>
+        $(document).on("submit", "#post-form", function (e) {
+            e.preventDefault();
+
+            const linkVal = $("#link").val().trim();
+
+            if (linkVal === "") {
+                showToast("Please enter a URL before shortening!");
+                return;
+            }
+
+            $.ajax({
+                type: "POST",
+                url: "/create",
+                data: {
+                    link: linkVal,
+                    csrfmiddlewaretoken: $('input[name=csrfmiddlewaretoken]').val(),
+                },
+                success: function (data) {
+                    const shortUrl = window.location.origin + "/" + data;
+                    $("h2").html(
+                        `<a href="${shortUrl}" target="_blank">${shortUrl}</a>`
+                    );
+                    showToast("Short URL created successfully!");
+                },
+                error: function () {
+                    showToast("Error creating short URL. Please try again.");
+                },
+            });
+        });
+
+        $("#cancel").on("click", function () {
+            $("#link").val("").blur();
+            $("h2").empty();
+            showToast("URL entry cleared!");
+        });
+
+        function showToast(message) {
+            const toast = $('<div class="toast"></div>').text(message);
+            $("#toast-container").html(toast);
+            setTimeout(() => toast.remove(), 2500);
+        }
+    </script>
+</body>
+</html>
